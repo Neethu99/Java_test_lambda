@@ -2,9 +2,9 @@ pipeline {
     agent any
 
     environment {
-        function_Dev = 'java-lambda-test-Dev'
-        function_Test = 'java-lambda-test-Test'
-        function_Prod = 'java-lambda-test-Prod'
+        function_Dev = 'Workshop12345'
+        function_Test = 'workshoptest2345'
+        function_Prod = 'Workshopprod12345'
 
     }
 
@@ -42,12 +42,12 @@ pipeline {
              }
         }
 
-        stage('Push') {
-            steps {
-                echo 'Push'
-                sh "aws s3 cp target/sample-1.0.3.jar s3://neethus3"
-            }
-        }
+        // stage('Push') {
+       // steps {
+      //  echo 'Push'
+     //  sh "aws s3 cp target/sample-1.0.3.jar s3://neethus3"
+    //  }
+   // }
 
         // Ci Ended
 
@@ -59,14 +59,15 @@ pipeline {
                 stage('Deploy to Dev') {
                     steps {
                         echo 'Build'
-                        sh "aws lambda update-function-code --function-name $function_Dev --region us-east-1 --s3-bucket neethus3 --s3-key sample-1.0.3.jar"
+                        sh "aws lambda update-function-code --function-name $function_Dev" 
+                        
                     }
                 }
 
                 stage('Deploy to test ') {
                     steps {
                         echo 'Build'
-                        sh "aws lambda update-function-code --function-name $function_Test --region us-east-1 --s3-bucket neethus3 --s3-key sample-1.0.3.jar"
+                        sh "aws lambda update-function-code --function-name $function_Test" 
                     }
                 }
             }
@@ -88,7 +89,7 @@ pipeline {
                 branch 'main'
             }
             steps {
-                sh "aws lambda update-function-code --function-name $function_Prod --region us-east-1 --s3-bucket neethus3 --s3-key sample-1.0.3.jar"
+                sh "aws lambda update-function-code --function-name $function_Prod"
             }
         }
         // CD Ended
