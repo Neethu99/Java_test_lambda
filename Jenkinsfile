@@ -1,115 +1,40 @@
-pipeline {
-    agent any
+import groovy.json.JsonSlurper
 
-    environment {
-        function_Dev = 'Workshop12345'
-        function_Test = 'workshoptest2345'
-        function_Prod = 'Workshopprod12345'
+def getFtpPublishProfile(def publishProfilesJson) {
+  def pubProfiles = new JsonSlurper().parseText(publishProfilesJson)
+  for (p in pubProfiles)
+    if (p['publishMethod'] == 'FTP')
+      return [url: p.publishUrl, username: p.userName, password: p.userPWD]
+}
 
+node {
+  withEnv(['AZURE_SUBSCRIPTION_ID=<bbe903db-c54a-4b87-b4b2-cf027381fee4>',
+        'AZURE_TENANT_ID=<0e8f80a4-274e-42d0-815d-cb3744fe826e>']) {
+    stage('init') {
+      checkout scm
     }
-
-    parameters {
-        string(name: 'RollbackVersion', description: 'Please enter rollback version')
-        choice(
-            choices: ['Dev', 'Test', 'Prod'],
-            name: 'Environment',
-            description : 'Please select environment'
-        )
+  
+    stage('build') {
+      sh 'mvn clean package'
     }
-
-    stages {
-        // CI Start
-        stage('Build') {
-            steps {
-                echo 'Build'
-                sh 'mvn package'
-            }
-        }
-
-      //  stage("SonarQube analysis") {
-      //       agent any
-
-      //       when {
-     //          anyOf {
-    //              branch 'feature/*'
-   //            branch 'main'
- //         }
-        //     }
-        //     steps {
-        //         withSonarQubeEnv('Sonar') {
-        //             sh 'mvn sonar:sonar'
-        //         }
-        //     }
-       // }
-
-        // stage('Push') {
-       // steps {
-      //  echo 'Push'
-     //  sh "aws s3 cp target/sample-1.0.3.jar s3://neethus3"
-    //  }
-   // }
-
-        // Ci Ended
-
-        // CD Started
-
-        stage('Deployments') {
-            parallel {
-
-                stage('Deploy to Dev') {
-                    steps {
-                        echo 'Build'
-                        sh "aws lambda update-function-code --function-name $function_Dev" 
-                        
-                    }
-                }
-
-                stage('Deploy to test ') {
-                    steps {
-                        echo 'Build'
-                        sh "aws lambda update-function-code --function-name $function_Test" 
-                    }
-                }
-            }
-        }
-
-        stage('Deploy to Prod') {
-            when {
-                expression { return params.Environment == 'Prod'}
-            }
-            steps {
-               input (
-                    message: 'Would you like to proceed for Production Deployment?'
-               )
-            }
-        }
-
-        stage('Release to Prod') {
-            when {
-                branch 'main'
-            }
-            steps {
-                sh "aws lambda update-function-code --function-name $function_Prod"
-            }
-        }
-        // CD Ended
+  
+    stage('deploy') {
+      def resourceGroup = '<Workshop>'
+      def webAppName = '<Workshop12345>'
+      // login Azure
+      withCredentials([usernamePassword(credentialsId: '<workshop>', passwordVariable: '4bd92968-e8a0-4dc9-b2f9-329e66ba055c', usernameVariable: '0548017d-e29a-4960-a919-4309a7a96917')]) {
+       sh '''
+          az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
+          az account set -s $AZURE_SUBSCRIPTION_ID
+        '''
+      }
+      // get publish settings
+      def pubProfilesJson = sh script: "az webapp deployment list-publishing-profiles -g $resourceGroup -n $webAppName", returnStdout: true
+      def ftpProfile = getFtpPublishProfile pubProfilesJson
+      // upload package
+      sh "curl -T target/calculator-1.0.war $ftpProfile.url/webapps/ROOT.war -u '$ftpProfile.username:$ftpProfile.password'"
+      // log out
+      sh 'az logout'
     }
-
-    post {
-        always {
-            echo "${env.BUILD_ID}"
-            echo "${BRANCH_NAME}"
-            echo "${JENKINS_URL}"
-            mail to: 'bhanutejap822@gmail.com', subject: 'Build status' ,body: 'this build is successful'
-                
-
-        }
-
-        failure {
-            echo 'failed'
-        }
-        aborted {
-            echo 'aborted'
-        }
-    }
+  }
 }
