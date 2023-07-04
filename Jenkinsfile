@@ -8,21 +8,21 @@ def getFtpPublishProfile(def publishProfilesJson) {
 }
 
 node {
-  withEnv(['AZURE_SUBSCRIPTION_ID=<bbe903db-c54a-4b87-b4b2-cf027381fee4>',
-        'AZURE_TENANT_ID=<0e8f80a4-274e-42d0-815d-cb3744fe826e>']) {
+  withEnv(['AZURE_SUBSCRIPTION_ID=bbe903db-c54a-4b87-b4b2-cf027381fee4',
+        'AZURE_TENANT_ID=0e8f80a4-274e-42d0-815d-cb3744fe826e']) {
     stage('init') {
       checkout scm
     }
-  //ddd
+  
     stage('build') {
       sh 'mvn clean package'
     }
   
     stage('deploy') {
-      def resourceGroup = '<Workshop>'
-      def webAppName = '<Workshop12345>'
+      def resourceGroup = 'Workshop'
+      def webAppName = 'Workshop12345'
       // login Azure
-      withCredentials([usernamePassword(credentialsId: '<workshop>', passwordVariable: '4bd92968-e8a0-4dc9-b2f9-329e66ba055c', usernameVariable: '0548017d-e29a-4960-a919-4309a7a96917')]) {
+      withCredentials([usernamePassword(credentialsId: '17b38a04-19d6-4eee-b36a-97ef141401af', passwordVariable: '4bd92968-e8a0-4dc9-b2f9-329e66ba055c', usernameVariable: '0548017d-e29a-4960-a919-4309a7a96917')]) {
        sh '''
           az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
           az account set -s $AZURE_SUBSCRIPTION_ID
